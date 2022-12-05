@@ -119,7 +119,7 @@ print("!!!!!!!!!!!!!!!!!!!!!!EV_info: ", args.EV_info)
 
 if args.wandb == True:
     exp_name = args.name + "_" + args.dataset_mode
-    wandb.init(name=exp_name, project="Supplementary")
+    wandb.init(name=exp_name, project="SecondHalf_Exp")
 
 # Folder establish
 exp_path = "./experiment/" + args.name

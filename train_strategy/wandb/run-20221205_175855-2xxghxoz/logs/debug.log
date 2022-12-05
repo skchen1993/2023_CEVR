@@ -1,0 +1,27 @@
+2022-12-05 17:58:55,226 INFO    MainThread:84199 [wandb_setup.py:_flush():75] Loading settings from /home/skchen/.config/wandb/settings
+2022-12-05 17:58:55,226 INFO    MainThread:84199 [wandb_setup.py:_flush():75] Loading settings from /home/skchen/HDR_research/CEVR/Code/train_strategy/wandb/settings
+2022-12-05 17:58:55,226 INFO    MainThread:84199 [wandb_setup.py:_flush():75] Loading settings from environment variables: {}
+2022-12-05 17:58:55,227 INFO    MainThread:84199 [wandb_setup.py:_flush():75] Inferring run settings from compute environment: {'program_relpath': 'train_strategy/train_warmupLoss.py', 'program': 'train_warmupLoss.py'}
+2022-12-05 17:58:55,227 INFO    MainThread:84199 [wandb_init.py:_log_setup():437] Logging user logs to /home/skchen/HDR_research/CEVR/Code/train_strategy/wandb/run-20221205_175855-2xxghxoz/logs/debug.log
+2022-12-05 17:58:55,227 INFO    MainThread:84199 [wandb_init.py:_log_setup():438] Logging internal logs to /home/skchen/HDR_research/CEVR/Code/train_strategy/wandb/run-20221205_175855-2xxghxoz/logs/debug-internal.log
+2022-12-05 17:58:55,228 INFO    MainThread:84199 [wandb_init.py:init():471] calling init triggers
+2022-12-05 17:58:55,228 INFO    MainThread:84199 [wandb_init.py:init():475] wandb.init called with sweep_config: {}
+config: {}
+2022-12-05 17:58:55,228 INFO    MainThread:84199 [wandb_init.py:init():524] starting backend
+2022-12-05 17:58:55,228 INFO    MainThread:84199 [backend.py:_multiprocessing_setup():99] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2022-12-05 17:58:55,268 INFO    MainThread:84199 [backend.py:ensure_launched():217] starting backend process...
+2022-12-05 17:58:55,279 INFO    MainThread:84199 [backend.py:ensure_launched():222] started backend process with pid: 84452
+2022-12-05 17:58:55,280 INFO    MainThread:84199 [wandb_init.py:init():533] backend started and connected
+2022-12-05 17:58:55,285 INFO    MainThread:84199 [wandb_init.py:init():597] updated telemetry
+2022-12-05 17:58:55,307 INFO    MainThread:84199 [wandb_init.py:init():628] communicating run to backend with 30 second timeout
+2022-12-05 17:58:56,555 INFO    MainThread:84199 [wandb_run.py:_on_init():1923] communicating current version
+2022-12-05 17:58:56,920 INFO    MainThread:84199 [wandb_run.py:_on_init():1927] got version response upgrade_message: "wandb version 0.13.5 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2022-12-05 17:58:56,920 INFO    MainThread:84199 [wandb_init.py:init():659] starting run threads in backend
+2022-12-05 17:59:01,947 INFO    MainThread:84199 [wandb_run.py:_console_start():1897] atexit reg
+2022-12-05 17:59:01,948 INFO    MainThread:84199 [wandb_run.py:_redirect():1770] redirect: SettingsConsole.REDIRECT
+2022-12-05 17:59:01,950 INFO    MainThread:84199 [wandb_run.py:_redirect():1775] Redirecting console.
+2022-12-05 17:59:01,956 INFO    MainThread:84199 [wandb_run.py:_redirect():1831] Redirects installed.
+2022-12-05 17:59:01,956 INFO    MainThread:84199 [wandb_init.py:init():684] run started, returning control to user process
+2022-12-05 18:02:33,659 INFO    MainThread:84199 [wandb_run.py:_atexit_cleanup():1866] got exitcode: 255
+2022-12-05 18:02:33,665 INFO    MainThread:84199 [wandb_run.py:_restore():1838] restore

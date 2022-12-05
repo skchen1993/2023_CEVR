@@ -1,0 +1,16 @@
+makedir:  ./experiment/Affine2_DIFOnly_l1Float0.1_1250epo_AugBmodel
+makedir:  ./experiment/Affine2_DIFOnly_l1Float0.1_1250epo_AugBmodel/inc
+Initializing with device: cuda ,seed: 14589521019421467395
+dataset: half , batch size: 4
+mode: increase img_num: 7 img_set: 4 img_size: (256, 256)
+normal model
+Resize_conv upsample mode:  bicubic
+Resize_conv upsample mode:  bicubic
+Resize_conv upsample mode:  bicubic
+model_name: affine2_pad pretrain: vgg mlp_num: 3 decoder: mult_resizeUp activation: leaky_relu
+  0%|                                                                                                               | 0/1250 [00:00<?, ?it/s]/home/skchen/anaconda3/envs/liif_newTorch/lib/python3.6/site-packages/torch/nn/functional.py:3635: UserWarning: Default upsampling behavior when mode=bicubic is changed to align_corners=False since 0.4.0. Please specify align_corners=True if the old behavior is desired. See the documentation of nn.Upsample for details.
+  "See the documentation of nn.Upsample for details.".format(mode)
+
+
+
+
