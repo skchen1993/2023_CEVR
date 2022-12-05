@@ -1,1 +1,0 @@
-{"train_loss": 14668.617207845053, "train_L1Loss": 14668.617207845053, "train_psnr": 22.24077395105841, "lr": 0.00015930676289532372, "train_FloatLoss": 0.0, "test_loss": 342161.0256890191, "test_psnr": 24.773152352582393, "_timestamp": 1670234545, "_runtime": 96, "_step": 2, "_wandb": {"runtime": 103}}
