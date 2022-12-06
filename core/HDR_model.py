@@ -116,7 +116,6 @@ class HDR_UNet_BN_Res_Affine2_pad(nn.Module):
             print("Model weight initialization successfully!!!!")
 
     def forward(self, x, step, origin):
-        #pdb.set_trace()
 
         in_img = x.clone()
         feature_maps = []
@@ -199,7 +198,6 @@ class HDR_UNet_BN_Res_Affine2_pad_Noaffine(nn.Module):
             print("Model weight initialization successfully!!!!")
 
     def forward(self, x, step, origin):
-        #pdb.set_trace()
 
         in_img = x.clone()
         feature_maps = []
@@ -233,6 +231,91 @@ class HDR_UNet_BN_Res_Affine2_pad_Noaffine(nn.Module):
                 nn.init.kaiming_uniform_(m.weight)
                 nn.init.constant_(m.bias, 0)
 
+class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(nn.Module):
+    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP, activation='relu', EV_info=1, init=False):
+        super().__init__()
+        self.act = get_activation(activation)
+        self.EV_info = EV_info
+        self.emb = None
+        self.init = init
+
+        if EV_info == 3:
+            self.emb = MLP(1, 16, [8]) #emb DIF to dim=16 vector
+
+        self.encoder1 = models.vgg16_bn(pretrained=pretrain).features[0:6]
+        self.encoder2 = models.vgg16_bn(pretrained=pretrain).features[6:13]
+        self.encoder3 = models.vgg16_bn(pretrained=pretrain).features[13:23]
+
+        self.downsample = models.vgg16_bn(pretrained=pretrain).features[23]
+
+        # -------------- LayerNorm elementwise_affine = False --------------- #
+        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+
+        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+
+        print("!!!!! LayerNorm elementwise_affine = False !!!!!!")
+
+        if self.EV_info == 2:
+            self.conv_rgb = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
+            self.conv_mul = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
+
+        elif self.EV_info == 1:
+            self.conv_rgb = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
+            self.conv_mul = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
+
+        elif self.EV_info == 3:
+            self.conv_rgb = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
+            self.conv_mul = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
+
+
+        self.encoders = [self.encoder1, self.encoder2, self.encoder3]
+        self.decoders = [self.decoder3, self.decoder4, self.decoder5]
+
+        #Initialize the weight
+        if self.init == True:
+            self.initialize_weights()
+            print("Model weight initialization successfully!!!!")
+
+    def forward(self, x, step, origin):
+
+        in_img = x.clone()
+        feature_maps = []
+        for encoder in self.encoders:
+            x = encoder(x)
+            feature_maps.append(x)
+
+        feature = self.neck(x, step, origin)
+
+        feature_maps.reverse()
+        for decoder, maps in zip(self.decoders, feature_maps):
+            feature = decoder(feature, maps, step, origin)
+
+        feature = pad_EV(feature, step, origin, EV_info=self.EV_info, emb=self.emb)
+
+
+        scaler = self.conv_mul(feature)
+        feature = self.conv_rgb(feature)
+
+        return feature + in_img * scaler
+
+    def initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+            elif isinstance(m, nn.BatchNorm2d): 
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+            elif isinstance(m, nn.Linear): 
+                nn.init.kaiming_uniform_(m.weight)
+                nn.init.constant_(m.bias, 0)
+
+
 
 
 
@@ -240,7 +323,7 @@ def build_network(args):
     """Builds the neural network."""
     net_name = args.model_name
 
-    implemented_networks = ('affine2_pad', 'affine2_pad_Noaff')
+    implemented_networks = ('affine2_pad', 'affine2_pad_Noaff', 'affine2_pad_LNnoaffine')
     assert net_name in implemented_networks
 
     pretraining = False
@@ -255,6 +338,11 @@ def build_network(args):
 
     if net_name == 'affine2_pad_Noaff':
         net = HDR_UNet_BN_Res_Affine2_pad_Noaffine(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
+    
+    if net_name == 'affine2_pad_LNnoaffine':
+        print("!!!! net_name = affine2_pad_LNnoaffine !!!!")
+        net = HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
+
 
     print('model_name:', args.model_name, 
         'pretrain:', args.pretrain, 'mlp_num:', args.mlp_num, 

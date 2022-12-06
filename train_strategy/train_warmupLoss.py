@@ -152,14 +152,10 @@ train_loader = DataLoader(trainset, args.batch_size, shuffle=True, num_workers=a
 test_loader = DataLoader(testset, args.batch_size, shuffle=False, num_workers=args.loader_worker, pin_memory=False)
 
 # Model
-if args.cycle:
-    from core.cycle_model import build_network
-    print('cycle model')
-    model = build_network(args)
-else:
-    from core.HDR_model import build_network
-    print('normal model')
-    model = build_network(args)
+from core.HDR_model import build_network
+print("args.model_name: ", args.model_name)
+print('normal model')
+model = build_network(args)
 model.to(device)
 
 
