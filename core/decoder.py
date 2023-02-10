@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import pdb
 
 class MLP_act(nn.Module):
     def __init__(self, in_dim, out_dim, hidden_list, act=nn.ReLU) -> None:
@@ -236,15 +237,99 @@ class Upsample_MLP_multi_ResizeConvUp(nn.Module):
 
 
 
+class Upsample_MLP_multi_ResizeConvUp_Map(nn.Module):
+    def __init__(self, up_ch, in_ch, out_ch, h, w, mlp_num=3, map_scale=2, residual=True, act=nn.ReLU, EV_info=1, emb=None, ln_affine=True) -> None:
+        super().__init__()
+        self.res = residual
+        self.act = act
+        self.EV_info = EV_info
+        self.emb = emb
+        self.ln_affine = ln_affine
+        self.map_scale = map_scale
+
+        if self.ln_affine == False:
+            print("Decoder layer norm don't use elementwise_affine")
+
+
+        hidden_list = []
+        for _ in range(mlp_num-1):
+            hidden_list.append(out_ch//2)
+
+        #self.upconv = nn.ConvTranspose2d(up_ch, in_ch, kernel_size=2, stride=2)
+        # Use resize + conv3x3
+        mode = 'bicubic'
+        print("Resize_conv upsample mode: ", mode)
+        self.resize= nn.Upsample(scale_factor=2, mode=mode)
+        self.conv_resize = nn.Conv2d(up_ch, in_ch, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+
+
+        if self.EV_info == 2:
+            self.mlp1 = MLP(in_ch *2 +2, out_ch, [], act=self.act)
+            self.ln = nn.LayerNorm([out_ch, h, w], elementwise_affine=self.ln_affine)
+            self.mlp3 = MLP(out_ch +2, out_ch, hidden_list, act=self.act)
+            self.mlp4 = MLP(out_ch +2, out_ch, hidden_list, act=self.act)
+            
+        elif self.EV_info == 1:
+            self.mlp1 = MLP(in_ch *2 +1, out_ch, [], act=self.act)
+            self.ln = nn.LayerNorm([out_ch, h, w], elementwise_affine=self.ln_affine)
+            self.mlp3 = MLP(out_ch +1, out_ch, hidden_list, act=self.act)
+            self.mlp4 = MLP(out_ch +1, out_ch, hidden_list, act=self.act)
+
+        elif self.EV_info == 3:
+            self.mlp1 = MLP(in_ch *2 +16, out_ch, [], act=self.act)
+            self.ln = nn.LayerNorm([out_ch, h, w], elementwise_affine=self.ln_affine)
+            self.mlp3 = MLP(out_ch +16, out_ch, hidden_list, act=self.act)
+            self.mlp4 = MLP(out_ch +16, out_ch, hidden_list, act=self.act)  
+
+        if self.map_scale != 1:
+            self.map_resize= nn.Upsample(scale_factor=self.map_scale, mode=mode)
+            self.conv_rgb = nn.Conv2d(out_ch, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))   
+            self.conv_mul = nn.Conv2d(out_ch, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))   
+
+    def forward(self, x:torch.Tensor, y:torch.Tensor, s:torch.Tensor, b:torch.Tensor) -> torch.Tensor:
+        #x = self.upconv(x)
+        x = self.resize(x)
+        x = self.conv_resize(x)
+
+        inputs = torch.cat([x, y], dim=1)
+        inputs = MLP_with_EV(inputs, s, b, self.mlp1, EV_info=self.EV_info, emb=self.emb)
+
+        if self.res:
+            identity = inputs.clone()
+            inputs = self.ln(inputs)
+            inputs = MLP_with_EV(inputs, s , b , self.mlp3, EV_info=self.EV_info, emb=self.emb)
+            inputs = MLP_with_EV(inputs, s , b , self.mlp4, EV_info=self.EV_info, emb=self.emb)
+            feat_out = inputs + identity
+
+            if self.map_scale != 1:
+                #------ Output Map------
+                feat_map = self.map_resize(feat_out)
+                alpha = self.conv_mul(feat_map)
+                beta = self.conv_rgb(feat_map)
+                #-----------------------
+                return feat_out, alpha, beta
+            else:
+                return feat_out
+        else:
+            inputs = self.ln(inputs)
+            inputs = MLP_with_EV(inputs, s , b , self.mlp3, EV_info=self.EV_info, emb=self.emb)
+            return MLP_with_EV(inputs, s , b , self.mlp4, EV_info=self.EV_info, emb=self.emb)
+
+
+
+
 def build_decoder(args):
     decode_name = args.decode_name
 
-    implemented_decoder = ('mult_resizeUp')
+    implemented_decoder = ('mult_resizeUp', 'mult_resizeUp_map')
     assert decode_name  in implemented_decoder
 
     decoder = None
 
     if decode_name == 'mult_resizeUp':
         decoder = Upsample_MLP_multi_ResizeConvUp
+
+    elif decode_name == 'mult_resizeUp_map':
+        decoder = Upsample_MLP_multi_ResizeConvUp_Map
 
     return decoder
