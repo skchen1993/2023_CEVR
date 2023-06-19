@@ -1,13 +1,23 @@
+import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+cpu_num = 8  # Num of CPUs you want to use
+os.environ['OMP_NUM_THREADS'] = str(cpu_num)
+os.environ['OPENBLAS_NUM_THREADS'] = str(cpu_num)
+os.environ['MKL_NUM_THREADS'] = str(cpu_num)
+os.environ['VECLIB_MAXIMUM_THREADS'] = str(cpu_num)
+os.environ['NUMEXPR_NUM_THREADS'] = str(cpu_num)
+torch.set_num_threads(cpu_num)
+
+
 import sys
 path = "../"
 sys.path.append(path)
 
-import os
+
 import os.path
 from os import path
-import torch
-import torch.nn as nn
-import torch.optim as optim
 import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -92,6 +102,8 @@ parser.add_argument('--sep', type=float, default=0.5)
 #parser.add_argument('--DIF',  action='store_true', default=False)
 parser.add_argument('--EV_info',  type=int, default=2, help="1: only cat dif, 2: cat source and dif, 3: Embed DIF to 16 dim vec")
 parser.add_argument('--init_weight',  action='store_true', default=False)
+parser.add_argument('--norm_type', type=str, default='LayerNorm', help="LayerNorm, GroupNorm, InstanceNorm") 
+parser.add_argument('--NormAffine', action='store_true', default=False)
 
 
 # record
@@ -114,12 +126,14 @@ print("!!!!!!!!!!!!!!!!!!!!!!TVLoss: ", args.TVLoss)
 print("!!!!!!!!!!!!!!!!!!!!!!warmup_thr: ", args.warmup_thr)
 print("!!!!!!!!!!!!!!!!!!!!!!LR_CosAnneal: ", args.LR_CosAnneal)
 print("!!!!!!!!!!!!!!!!!!!!!!augment: ", args.augment)
-print("!!!!!!!!!!!!!!!!!!!!!!norm: ", args.norm)
+print("!!!!!!!!!!!!!!!!!!!!!!data normalization: ", args.norm)
 print("!!!!!!!!!!!!!!!!!!!!!!EV_info: ", args.EV_info)
+print("!!!!!!!!!!!!!!!!!!!!!!Feature norm type: ", args.norm_type)
+
 
 if args.wandb == True:
     exp_name = args.name + "_" + args.dataset_mode
-    wandb.init(name=exp_name, project="SecondHalf_Exp")
+    wandb.init(name=exp_name, project="MTK_cityscapeEXP")
 
 # Folder establish
 exp_path = "./experiment/" + args.name
@@ -215,6 +229,7 @@ for epoch in tqdm(range(args.num_epoch)):
 
     #for data in train_loader:
     for i, data in enumerate(train_loader):
+
         loss_train = 0 # total training loss
         loss_l1 = 0
         loss_percept = 0

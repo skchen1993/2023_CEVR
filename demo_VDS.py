@@ -32,6 +32,8 @@ parser.add_argument('--cycle', action='store_true', default=False)
 parser.add_argument('--sep', type=float, default=0.5)
 parser.add_argument('--EV_info',  type=int, default=2, help="1: only cat dif, 2: cat source and dif, 3: Embed DIF to 16 dim vec")
 parser.add_argument('--init_weight',  action='store_true', default=False)
+parser.add_argument('--norm_type', type=str, default='GroupNorm', help="LayerNorm, GroupNorm, InstanceNorm") 
+parser.add_argument('--NormAffine', action='store_true', default=False)
 
 # dataset
 parser.add_argument('--data_root', type=str, default='/home/skchen/ML_practice/LIIF_on_HDR/VDS_dataset/')
@@ -40,11 +42,19 @@ parser.add_argument('--Float_Stack2', action='store_true', default=False)
 parser.add_argument('--Float_Stack3', action='store_true', default=False)
 
 # exp path
-parser.add_argument('--exp_path', type=str, default='./train_strategy/experiment/NoaffineNocycle/') # Exp folder
+#parser.add_argument('--exp_path', type=str, default='./train_strategy/experiment/Standard_noLNAffine_Whole/') # Exp folder
+parser.add_argument('--B_model_path', type=str, default='Standard_LNnoaffine_Maps_BmodelAug/') # Exp folder
+parser.add_argument('--D_model_path', type=str, default='Standard_LNnoaffine_Maps_Dmodel/') # Exp folder
+
 parser.add_argument('--resize', action='store_true', default=False)
-parser.add_argument('--epoch', type=str, default='620') # Exp folder
+parser.add_argument('--epoch', type=str, default='best') # Exp folder
 
 args = parser.parse_args()
+
+
+exp_base = "./train_strategy/experiment/"
+D_path = exp_base + args.D_model_path
+B_path = exp_base + args.B_model_path
 
 if args.resize:
 	print("!!!!!!!!!!inference on 256*256")
@@ -100,7 +110,8 @@ else:
 print("Dataset info preparation!!")
 
 # Build up output image folder
-save_path = args.exp_path + "exp_result_VDS_" + "epoch" + args.epoch + '/'
+#save_path = args.exp_path + "exp_result_VDS_" + "epoch" + args.epoch + '/'
+save_path = D_path + "exp_result_VDS_" + "epoch" + args.epoch + '/'
 if path.exists(save_path) == False:
     print("makedir: ", save_path )
     os.makedirs(save_path)
@@ -140,9 +151,9 @@ else:
 """
 
 weight_name = 'model_' + args.epoch + '.pth'
-model_inc.load_state_dict(torch.load(args.exp_path + 'inc/' + weight_name))
+model_inc.load_state_dict(torch.load(B_path + 'inc/' + weight_name))
 model_inc.to(device)
-model_dec.load_state_dict(torch.load(args.exp_path + 'dec/' + weight_name))
+model_dec.load_state_dict(torch.load(D_path + 'dec/' + weight_name))
 model_dec.to(device)
 print("Model build up and load weight successfully!!", " Weight name: ", weight_name)
 

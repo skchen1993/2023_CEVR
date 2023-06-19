@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import pdb
 from torchvision import models
-from core.decoder import MLP, MLP_act, MLP_with_EV, build_decoder, Bottel_neck, Upsample_MLP
+from core.decoder import MLP, MLP_act, MLP_with_EV, build_decoder, Bottel_neck, Upsample_MLP_multi_ResizeConvUp
 import timm
 
 
@@ -72,172 +72,19 @@ class MPReLU(torch.nn.Module):
         return self.__class__.__name__ + '(' \
                + 'num_parameters=' + str(self.num_parameters) + ')'
  
-class HDR_UNet_BN_Res_Affine2_pad(nn.Module):
-    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP, activation='relu', EV_info=1, init=False):
+
+class CEVR_NormNoAffine(nn.Module):
+    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP_multi_ResizeConvUp, activation='relu', EV_info=1, norm_type="LayerNorm", affine=False, init=False):
         super().__init__()
         self.act = get_activation(activation)
         self.EV_info = EV_info
         self.emb = None
         self.init = init
+        self.norm_type = norm_type
+        self.affine = affine
 
-        if EV_info == 3:
-            self.emb = MLP(1, 16, [8]) #emb DIF to dim=16 vector
-
-        self.encoder1 = models.vgg16_bn(pretrained=pretrain).features[0:6]
-        self.encoder2 = models.vgg16_bn(pretrained=pretrain).features[6:13]
-        self.encoder3 = models.vgg16_bn(pretrained=pretrain).features[13:23]
-
-        self.downsample = models.vgg16_bn(pretrained=pretrain).features[23]
-        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb)
-
-        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-
-        if self.EV_info == 2:
-            self.conv_rgb = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
-
-        elif self.EV_info == 1:
-            self.conv_rgb = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
-
-        elif self.EV_info == 3:
-            self.conv_rgb = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
-
-
-        self.encoders = [self.encoder1, self.encoder2, self.encoder3]
-        self.decoders = [self.decoder3, self.decoder4, self.decoder5]
-
-        #Initialize the weight
-        if self.init == True:
-            self.initialize_weights()
-            print("Model weight initialization successfully!!!!")
-
-    def forward(self, x, step, origin):
-
-        in_img = x.clone()
-        feature_maps = []
-        for encoder in self.encoders:
-            x = encoder(x)
-            feature_maps.append(x)
-
-        feature = self.neck(x, step, origin)
-
-        feature_maps.reverse()
-        for decoder, maps in zip(self.decoders, feature_maps):
-            feature = decoder(feature, maps, step, origin)
-
-        feature = pad_EV(feature, step, origin, EV_info=self.EV_info, emb=self.emb)
-
-
-        scaler = self.conv_mul(feature)
-        feature = self.conv_rgb(feature)
-
-        return feature + in_img * scaler
-
-    def initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-
-            elif isinstance(m, nn.BatchNorm2d): 
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-            elif isinstance(m, nn.Linear): 
-                nn.init.kaiming_uniform_(m.weight)
-                nn.init.constant_(m.bias, 0)
-         
-class HDR_UNet_BN_Res_Affine2_pad_Noaffine(nn.Module):
-    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP, activation='relu', EV_info=1, init=False):
-        super().__init__()
-        self.act = get_activation(activation)
-        self.EV_info = EV_info
-        self.emb = None
-        self.init = init
-
-        if EV_info == 3:
-            self.emb = MLP(1, 16, [8]) #emb DIF to dim=16 vector
-
-        self.encoder1 = models.vgg16_bn(pretrained=pretrain).features[0:6]
-        self.encoder2 = models.vgg16_bn(pretrained=pretrain).features[6:13]
-        self.encoder3 = models.vgg16_bn(pretrained=pretrain).features[13:23]
-
-        self.downsample = models.vgg16_bn(pretrained=pretrain).features[23]
-        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb)
-
-        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb)
-
-        """
-        if self.EV_info == 2:
-            self.conv_rgb = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
-
-        elif self.EV_info == 1:
-            self.conv_rgb = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(65, 1, kernel_size=(1, 1), stride=(1, 1))
-
-        elif self.EV_info == 3:
-            self.conv_rgb = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
-            self.conv_mul = nn.Conv2d(80, 1, kernel_size=(1, 1), stride=(1, 1))
-        """
-        self.conv_rgb = nn.Conv2d(64, 3, kernel_size=(1, 1), stride=(1, 1))
-
-        self.encoders = [self.encoder1, self.encoder2, self.encoder3]
-        self.decoders = [self.decoder3, self.decoder4, self.decoder5]
-
-        #Initialize the weight
-        if self.init == True:
-            self.initialize_weights()
-            print("Model weight initialization successfully!!!!")
-
-    def forward(self, x, step, origin):
-
-        in_img = x.clone()
-        feature_maps = []
-        for encoder in self.encoders:
-            x = encoder(x)
-            feature_maps.append(x)
-
-        feature = self.neck(x, step, origin)
-
-        feature_maps.reverse()
-        for decoder, maps in zip(self.decoders, feature_maps):
-            feature = decoder(feature, maps, step, origin)
-
-        #feature = pad_EV(feature, step, origin, EV_info=self.EV_info, emb=self.emb)
-        feature = self.conv_rgb(feature)
-
-        return feature 
-
-    def initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-
-            elif isinstance(m, nn.BatchNorm2d): 
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-            elif isinstance(m, nn.Linear): 
-                nn.init.kaiming_uniform_(m.weight)
-                nn.init.constant_(m.bias, 0)
-
-class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(nn.Module):
-    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP, activation='relu', EV_info=1, init=False):
-        super().__init__()
-        self.act = get_activation(activation)
-        self.EV_info = EV_info
-        self.emb = None
-        self.init = init
+        if self.affine == False:
+            print("CEVR Normalization layer affine: False")
 
         if EV_info == 3:
             self.emb = MLP(1, 16, [8]) #emb DIF to dim=16 vector
@@ -249,13 +96,12 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(nn.Module):
         self.downsample = models.vgg16_bn(pretrained=pretrain).features[23]
 
         # -------------- LayerNorm elementwise_affine = False --------------- #
-        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
 
-        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
-        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
-        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
+        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
+        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
 
-        print("!!!!! LayerNorm elementwise_affine = False !!!!!!")
 
         if self.EV_info == 2:
             self.conv_rgb = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
@@ -316,15 +162,21 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-
-
-class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
-    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP, activation='relu', EV_info=1, init=False):
+class CEVR_NormNoAffine_Maps(nn.Module):
+    def __init__(self, mlp_layer=2, pretrain=True, Decoder=Upsample_MLP_multi_ResizeConvUp, activation='relu', EV_info=1, norm_type="LayerNorm", affine=False, init=False):
         super().__init__()
         self.act = get_activation(activation)
         self.EV_info = EV_info
         self.emb = None
         self.init = init
+        self.norm_type = norm_type
+        self.affine = affine
+
+        if self.affine == False:
+            print("CEVR(Maps) Normalization layer affine: False")
+
+        self.IntTrans_map_alpha = []
+        self.IntTrans_map_beta = []
 
         if EV_info == 3:
             self.emb = MLP(1, 16, [8]) #emb DIF to dim=16 vector
@@ -336,13 +188,11 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
         self.downsample = models.vgg16_bn(pretrained=pretrain).features[23]
 
         # -------------- LayerNorm elementwise_affine = False --------------- #
-        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
+        self.neck = Bottel_neck(256, 256, 32, 32, mlp_layer, self.downsample, act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
 
-        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, map_scale=4 ,act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
-        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, map_scale=2 ,act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
-        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, map_scale=1 ,act=self.act, EV_info=self.EV_info, emb=self.emb, ln_affine=False)
-
-        print("!!!!! LayerNorm elementwise_affine = False !!!!!!")
+        self.decoder3 = Decoder(256, 256, 256, 64, 64, mlp_layer, map_scale=4 ,act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
+        self.decoder4 = Decoder(256, 128, 128, 128, 128, mlp_layer, map_scale=2 ,act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
+        self.decoder5 = Decoder(128, 64, 64, 256, 256, mlp_layer, map_scale=1 ,act=self.act, EV_info=self.EV_info, emb=self.emb, norm_type=self.norm_type ,affine=self.affine)
 
         if self.EV_info == 2:
             self.conv_rgb = nn.Conv2d(66, 1, kernel_size=(1, 1), stride=(1, 1))
@@ -369,8 +219,8 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
 
         img = x.clone()
         feature_maps = []
-        IntTrans_map_alpha = []
-        IntTrans_map_beta = []
+        self.IntTrans_map_alpha = []
+        self.IntTrans_map_beta = []
 
 
         for encoder in self.encoders:
@@ -387,8 +237,8 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
             maps = feature_maps[index]
             if index != (len(self.decoders) - 1):
                 feature, alpha, beta = decoder(feature, maps, step, origin)
-                IntTrans_map_alpha.append(alpha)
-                IntTrans_map_beta.append(beta)
+                self.IntTrans_map_alpha.append(alpha)
+                self.IntTrans_map_beta.append(beta)
             else:
                 feature = decoder(feature, maps, step, origin)
 
@@ -396,13 +246,13 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
 
         alpha = self.conv_mul(feature)
         beta = self.conv_rgb(feature)
-        IntTrans_map_alpha.append(alpha)
-        IntTrans_map_beta.append(beta)
+        self.IntTrans_map_alpha.append(alpha)
+        self.IntTrans_map_beta.append(beta)
 
         #-------- Intensity transform (Maps) ------
-        for index in range(len(IntTrans_map_alpha)):
-            alpha = IntTrans_map_alpha[index]
-            beta = IntTrans_map_beta[index]
+        for index in range(len(self.IntTrans_map_alpha)):
+            alpha = self.IntTrans_map_alpha[index]
+            beta = self.IntTrans_map_beta[index]
             img = img * alpha + beta
         #------------------------------------------
 
@@ -425,16 +275,11 @@ class HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(nn.Module):
 
 
 
-
-
-
-
-
 def build_network(args):
     """Builds the neural network."""
     net_name = args.model_name
 
-    implemented_networks = ('affine2_pad', 'affine2_pad_Noaff', 'affine2_pad_LNnoaffine', 'affine2_pad_LNnoaffine_map')
+    implemented_networks = ('CEVR_NormNoAffine', 'CEVR_NormNoAffine_Maps')
     assert net_name in implemented_networks
 
     pretraining = False
@@ -444,19 +289,27 @@ def build_network(args):
 
     net = None
 
-    if net_name == 'affine2_pad':
-        net = HDR_UNet_BN_Res_Affine2_pad(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
-
-    if net_name == 'affine2_pad_Noaff':
-        net = HDR_UNet_BN_Res_Affine2_pad_Noaffine(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
+    if net_name == 'CEVR_NormNoAffine':
+        print("!!!! net_name = CEVR_NormNoAffine !!!!")
+        net = CEVR_NormNoAffine(pretrain=pretraining, 
+                                mlp_layer=args.mlp_num, 
+                                Decoder=decoder, 
+                                activation=args.act, 
+                                EV_info=args.EV_info, 
+                                init=args.init_weight, 
+                                norm_type=args.norm_type, 
+                                affine=args.NormAffine)
     
-    if net_name == 'affine2_pad_LNnoaffine':
-        print("!!!! net_name = affine2_pad_LNnoaffine !!!!")
-        net = HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
-    
-    if net_name == 'affine2_pad_LNnoaffine_map':
-        print("!!!! net_name = affine2_pad_LNnoaffine !!!!")
-        net = HDR_UNet_BN_Res_Affine2_pad_LNaffineFalse_Map(pretrain=pretraining, mlp_layer=args.mlp_num, Decoder=decoder, activation=args.act, EV_info=args.EV_info, init=args.init_weight)
+    if net_name == 'CEVR_NormNoAffine_Maps':
+        print("!!!! net_name = CEVR_NormNoAffine_Maps !!!!")
+        net = CEVR_NormNoAffine_Maps(pretrain=pretraining, 
+                                    mlp_layer=args.mlp_num, 
+                                    Decoder=decoder, 
+                                    activation=args.act, 
+                                    EV_info=args.EV_info, 
+                                    init=args.init_weight, 
+                                    norm_type=args.norm_type, 
+                                    affine=args.NormAffine)
 
     print('model_name:', args.model_name, 
         'pretrain:', args.pretrain, 'mlp_num:', args.mlp_num, 

@@ -30,17 +30,26 @@ parser.add_argument('--EV_info',  type=int, default=2, help="1: only cat dif, 2:
 parser.add_argument('--init_weight',  action='store_true', default=False)
 
 # dataset
-parser.add_argument('--data_root', type=str, default='/home/skchen/Research_HDR_hunlin/HDREye/images/LDR/')
+parser.add_argument('--data_root', type=str, default='/home/skchen/HDR_research/HDREye/images/LDR/')
 parser.add_argument('--Float_Stack1', action='store_true', default=False)
 parser.add_argument('--Float_Stack2', action='store_true', default=False)
 parser.add_argument('--Float_Stack3', action='store_true', default=False)
 
 # exp path
-parser.add_argument('--exp_path', type=str, default='./train_strategy/experiment/noaffine_ablation/') # Exp folder
+#parser.add_argument('--exp_path', type=str, default='./train_strategy/experiment/Standard_noLNAffine_Whole/') # Exp folder
+parser.add_argument('--B_model_path', type=str, default='Standard_LNnoaffine_Maps_BmodelAug/') # Exp folder
+parser.add_argument('--D_model_path', type=str, default='Standard_LNnoaffine_Maps_Dmodel/') # Exp folder
+
 parser.add_argument('--resize', action='store_true', default=False)
 parser.add_argument('--epoch', type=str, default='620') # Exp folder
 
 args = parser.parse_args()
+
+
+exp_base = "./train_strategy/experiment/"
+D_path = exp_base + args.D_model_path
+B_path = exp_base + args.B_model_path
+
 
 if args.resize:
 	print("!!!!!!!!!!inference on 256*256")
@@ -98,7 +107,9 @@ else:
 print("Dataset info preparation!!")
 
 # Build up output image folder
-save_path = args.exp_path + "exp_result_HDREye_" + "epoch" + args.epoch + '/'
+#save_path = args.exp_path + "exp_result_HDREye_" + "epoch" + args.epoch + '/'
+save_path = D_path + "exp_result_HDREye_" + "epoch" + args.epoch + '/'
+
 if path.exists(save_path) == False:
     print("makedir: ", save_path )
     os.makedirs(save_path)
@@ -138,9 +149,9 @@ else:
 	print("Best Model build up and load weight successfully!!")
 """
 weight_name = 'model_' + args.epoch + '.pth'
-model_inc.load_state_dict(torch.load(args.exp_path + 'inc/' + weight_name))
+model_inc.load_state_dict(torch.load(B_path  + 'inc/' + weight_name))
 model_inc.to(device)
-model_dec.load_state_dict(torch.load(args.exp_path + 'dec/' + weight_name))
+model_dec.load_state_dict(torch.load(D_path + 'dec/' + weight_name))
 model_dec.to(device)
 print("Model build up and load weight successfully!!", " Weight name: ", weight_name)
 
