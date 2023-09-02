@@ -1,4 +1,19 @@
 # CEVR 
+ICCV 2023 Learning Continuous Exposure Value Representations for Single-Image HDR Reconstruction
+[Sy-Kai Chen](chensykai.backup@gmail.com), [Hung-Lin Yen](http://), [Yu-Lun Liu](https://yulunalexliu.github.io/), [Min-Hung Chen](https://minhungchen.netlify.app/), [Hou-Ning Hu](https://eborboihuc.github.io/), [Wen-Hsiao Peng](https://sites.google.com/g2.nctu.edu.tw/wpeng), [Yen-Yu Lin](https://sites.google.com/site/yylinweb/)
+
+Paper is [here](http://)
+Demo website is [here](http://)
+⭐For fast evaluation, you download the data and script [here](http://)
+***
+![CEVR](https://github.com/skchen1993/2023_CEVR/blob/main/img/teaset_png.PNG "CEVR")
+> Deep learning is commonly used to reconstruct HDR images from LDR images. LDR stack-based methods are used for single-image HDR reconstruction, generating an HDR image from a deep learning-generated LDR stack. However, current methods generate the stack with predetermined exposure values (EVs), which may limit the quality of HDR reconstruction. To address this, we propose the continuous exposure value representation (CEVR), which uses an implicit function to generate LDR images with arbitrary EVs, including those unseen during training. Our approach generates a continuous stack with more images containing diverse EVs, significantly improving HDR reconstruction. We use a cycle training strategy to supervise the model in generating continuous EV LDR images without corresponding ground truths. Our CEVR model outperforms existing methods, as demonstrated by experimental results.
+
+***
+## Fast Evaluation
+The ZIP file contain "results of each related work" and "the matlab script for evaluation". You can simply download the ZIP file and run the script to get the PSNR, HDR-VDP-2 score for tonemapped image and HDR file. (We evaluate on two datasets, VDS dataset and HDREye dataset, which are also in the ZIP file.)
+⭐[FILE_LINK is here](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view) 
+
 ## Environment
 torch: 1.12.1
 CUDA compilation tools: 10.1 
@@ -7,17 +22,6 @@ python 3.8.16
 ## Dataset
 [Deep chain HDRI github](https://siyeong-lee.github.io/hdr_vds_dataset/)
 Download the dataset and modify the `--data_root` (path to the VDS dataset)
-
-## Training 
-- cd to training_strategy folder
-- Using following code to do the bright model training:
-``` 
-CUDA_VISIBLE_DEVICES=4 python -u train_warmupLoss.py --dataset_mode=increase  --check_path=inc --name=CEVR_NormNoAffine_Maps_GN_Bmodel --model_name=CEVR_NormNoAffine_Maps --batch_size=4 --decode_name=mult_resizeUp_map --LR_CosAnneal --EV_info=1 --num_epoch=1250 --FloatLoss --Float_eff=0.1 --norm_type=GroupNorm --cache --wandb --augment 
-```
-- Using following code to do the dark model training:
-```
-CUDA_VISIBLE_DEVICES=5 python -u train_warmupLoss.py --dataset_mode=decrease  --check_path=dec --name=CEVR_NormNoAffine_Maps_GN_Dmodel --model_name=CEVR_NormNoAffine_Maps --batch_size=4 --decode_name=mult_resizeUp_map --LR_CosAnneal --EV_info=1 --num_epoch=1250  --FloatLoss --Float_eff=0.1 --norm_type=GroupNorm --cache --wandb
-```
 
 ## Inference
 ### VDS dataset:
