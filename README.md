@@ -23,7 +23,7 @@ The ZIP file contain "results of each related work" and "the matlab script for e
 ### VDS and HDREye Dataset 
 [Deep chain HDRI github](https://siyeong-lee.github.io/hdr_vds_dataset/)
 Download the dataset and modify the `--data_root` (path to the VDS dataset)  
-Note: Both VDS and HDREye dataset can be found in the [Fast evaluation file](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view?usp=sharing)
+⭐ Note: Both VDS and HDREye dataset can be found in the [Fast evaluation file](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view?usp=sharing) ⭐
 
 ## Inference
 Run the inference code to get the LDR images with different EV!  
