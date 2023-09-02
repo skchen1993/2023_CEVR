@@ -22,11 +22,11 @@ The ZIP file contain "results of each related work" and "the matlab script for e
 ## Dataset
 ### VDS and HDREye Dataset 
 [Deep chain HDRI github](https://siyeong-lee.github.io/hdr_vds_dataset/)
-Download the dataset and modify the `--data_root` (path to the VDS dataset)
+Download the dataset and modify the `--data_root` (path to the VDS dataset)  
 Note: Both VDS and HDREye dataset can be found in the [Fast evaluation file](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view?usp=sharing)
 
 ## Inference
-Run the inference code to get the LDR images with different EV!
+Run the inference code to get the LDR images with different EV!  
 ### VDS dataset:
 Whole dataset and whole LDR stack inference:
 ```
@@ -45,5 +45,5 @@ Whole dataset and whole LDR stack inference:
 CUDA_VISIBLE_DEVICES=7 python -u demo_Eye.py  --model_name=CEVR_NormNoAffine_Maps  --decode_name=mult_resizeUp_map --EV_info=1 --Float_Stack1 --resize  --epoch=best --norm_type=GroupNorm --D_model_path=CEVR_NormNoAffine_Maps_GN_Dmodel/ --B_model_path=CEVR_NormNoAffine_Maps_GN_Bmodel/
 ```
 - data_root: Remember to set the path to the HDREye dataset (Ex: `'/home/skchen/xxx/xxx/HDREye/images/LDR/'`)
-Note: HDREye dataset can be found in the [Fast evaluation file](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view?usp=sharing)
+
 
