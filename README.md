@@ -2,9 +2,9 @@
 ICCV 2023 Learning Continuous Exposure Value Representations for Single-Image HDR Reconstruction
 [Sy-Kai Chen](chensykai.backup@gmail.com), [Hung-Lin Yen](http://), [Yu-Lun Liu](https://yulunalexliu.github.io/), [Min-Hung Chen](https://minhungchen.netlify.app/), [Hou-Ning Hu](https://eborboihuc.github.io/), [Wen-Hsiao Peng](https://sites.google.com/g2.nctu.edu.tw/wpeng), [Yen-Yu Lin](https://sites.google.com/site/yylinweb/)
 
-Paper is [here]([http://](https://arxiv.org/abs/2309.03900))  
+Paper is [here](https://arxiv.org/abs/2309.03900)  
 Demo website is [here](https://skchen1993.github.io/CEVR_web/)  
-⭐For fast evaluation, you download the data and script [here]([http://](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view))  ⭐
+⭐For fast evaluation, you download the data and script [here](https://drive.google.com/file/d/1xeCT3APYkTnxeotb_t0wxdSPzBLbnU_p/view)  ⭐
 ***
 ![CEVR](https://github.com/skchen1993/2023_CEVR/blob/main/img/teaset_png.PNG "CEVR")
 > Deep learning is commonly used to reconstruct HDR images from LDR images. LDR stack-based methods are used for single-image HDR reconstruction, generating an HDR image from a deep learning-generated LDR stack. However, current methods generate the stack with predetermined exposure values (EVs), which may limit the quality of HDR reconstruction. To address this, we propose the continuous exposure value representation (CEVR), which uses an implicit function to generate LDR images with arbitrary EVs, including those unseen during training. Our approach generates a continuous stack with more images containing diverse EVs, significantly improving HDR reconstruction. We use a cycle training strategy to supervise the model in generating continuous EV LDR images without corresponding ground truths. Our CEVR model outperforms existing methods, as demonstrated by experimental results.
